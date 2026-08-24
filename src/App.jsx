@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import "./App.css";
 
 const AI_BRIDGE_URL = "http://127.0.0.1:5000/v1/chat/completions";
 const MAX_CONTEXT_MESSAGES = 20;
+const SYSTEM_MESSAGE = {
+  role: "system",
+  content: "Format every response as readable GitHub-flavored Markdown. Use headings, lists, tables, bold text, and code blocks when they improve clarity. Do not output raw HTML or script tags.",
+};
 const initialMessages = [];
 
 function buildApiMessages(history, currentInput) {
@@ -12,9 +18,20 @@ function buildApiMessages(history, currentInput) {
     .map(({ role, text }) => ({ role, content: text }));
 
   return [
+    SYSTEM_MESSAGE,
     ...recentHistory,
     { role: "user", content: currentInput },
   ];
+}
+
+function AssistantMessage({ content }) {
+  return (
+    <div className="message-body markdown-content">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function App() {
@@ -91,7 +108,9 @@ function App() {
           {messages.map((message, index) => (
             <article key={`${message.role}-${index}`} className={`message ${message.role}`}>
               <span className="message-label">{message.role === "assistant" ? "AI" : "You"}</span>
-              <p>{message.text}</p>
+              {message.role === "assistant"
+                ? <AssistantMessage content={message.text} />
+                : <p>{message.text}</p>}
             </article>
           ))}
           {loading && <article className="message assistant typing"><span className="message-label">AI</span><p>Processing through AI Bridge...</p></article>}
