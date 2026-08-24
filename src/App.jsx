@@ -3,17 +3,7 @@ import "./App.css";
 
 const AI_BRIDGE_URL = "http://127.0.0.1:5000/v1/chat/completions";
 const MAX_CONTEXT_MESSAGES = 20;
-const SYSTEM_MESSAGE = {
-  role: "system",
-  content: "You are a helpful AI assistant. Format responses as readable Markdown plain text. Do not output HTML or script tags.",
-};
-
-const initialMessages = [
-  {
-    role: "assistant",
-    text: "\u4f60\u597d\uff0c\u6211\u662f AI Bridge \u52a9\u624b\u3002\u8fd9\u662f\u4e00\u4e2a\u4f1a\u8bdd\u5185\u5b58 Demo\uff1a\u672c\u6b21\u5bf9\u8bdd\u4f1a\u81ea\u52a8\u643a\u5e26\u4e4b\u524d\u7684\u6d88\u606f\u3002",
-  },
-];
+const initialMessages = [];
 
 function buildApiMessages(history, currentInput) {
   const recentHistory = history
@@ -22,7 +12,6 @@ function buildApiMessages(history, currentInput) {
     .map(({ role, text }) => ({ role, content: text }));
 
   return [
-    SYSTEM_MESSAGE,
     ...recentHistory,
     { role: "user", content: currentInput },
   ];
