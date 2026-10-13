@@ -24,10 +24,40 @@ function buildApiMessages(history, currentInput) {
   ];
 }
 
-function AssistantMessage({ content }) {
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function underlineRestoredValues(values) {
+  const matches = [...new Set(values.filter(Boolean))].sort((a, b) => b.length - a.length);
+
+  return () => (tree) => {
+    function visit(node, inCode = false) {
+      if (!node.children) return;
+
+      node.children = node.children.flatMap((child) => {
+        if (child.type === "text" && !inCode && matches.length) {
+          return child.value
+            .split(new RegExp(`(${matches.map(escapeRegExp).join("|")})`, "g"))
+            .filter(Boolean)
+            .map((value) => matches.includes(value)
+              ? { type: "element", tagName: "span", properties: { className: ["restored-value"] }, children: [{ type: "text", value }] }
+              : { type: "text", value });
+        }
+
+        visit(child, inCode || child.tagName === "code" || child.tagName === "pre");
+        return child;
+      });
+    }
+
+    visit(tree);
+  };
+}
+
+function AssistantMessage({ content, restoredValues }) {
   return (
     <div className="message-body markdown-content">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[underlineRestoredValues(restoredValues)]} skipHtml>
         {content}
       </ReactMarkdown>
     </div>
@@ -82,6 +112,7 @@ function App() {
         {
           role: "assistant",
           text: payload.choices?.[0]?.message?.content || "The model returned no text.",
+          restoredValues: payload.gateway?.restoredValues || [],
         },
       ]);
     } catch (error) {
@@ -109,7 +140,7 @@ function App() {
             <article key={`${message.role}-${index}`} className={`message ${message.role}`}>
               <span className="message-label">{message.role === "assistant" ? "AI" : "You"}</span>
               {message.role === "assistant"
-                ? <AssistantMessage content={message.text} />
+                ? <AssistantMessage content={message.text} restoredValues={message.restoredValues || []} />
                 : <p>{message.text}</p>}
             </article>
           ))}
